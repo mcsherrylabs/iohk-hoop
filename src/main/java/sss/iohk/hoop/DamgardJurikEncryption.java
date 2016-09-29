@@ -57,6 +57,12 @@ public class DamgardJurikEncryption {
         return (BigIntegerCiphertext)encryptor.encrypt(plaintext);
     }
 
+    public BigIntegerCiphertext encrypt(PublicKey pub, BigInteger num, BigInteger randomNumber) throws Exception {
+        encryptor.setKey(pub);
+        BigIntegerPlainText plaintext = new BigIntegerPlainText(num);
+        return (BigIntegerCiphertext)encryptor.encrypt(plaintext, randomNumber);
+    }
+
     public BigIntegerPlainText decrypt(AsymmetricCiphertext cipher) throws Exception {
         encryptor.setKey(pair.getPublic(), pair.getPrivate());
         BigIntegerPlainText recoveredplaintext = (BigIntegerPlainText)encryptor.decrypt(cipher);

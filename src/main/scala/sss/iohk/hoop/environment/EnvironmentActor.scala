@@ -65,7 +65,7 @@ class EnvironmentActor(ui: UserInterface) extends Actor with ActorLogging {
 
     case ProtocolAborted =>
       log.warning(s"ProtocolAborted")
-      write("Protocol aborted! Took too long to input numbers?")
+      write("Protocol aborted! Took too long to input numbers? (Check log file for error)")
       sender() ! Begin
 
     case ReadyToVerify(id) =>

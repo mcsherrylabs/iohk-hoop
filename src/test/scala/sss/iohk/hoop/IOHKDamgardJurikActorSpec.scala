@@ -91,7 +91,7 @@ class IOHKDamgardJurikActorSpec
         // (even though the test dispatcher might only be a single thread.)
         environmentRef ? SupplyBigInt
         bobRef ! GetDamgardJurikEncryptedNum
-        val d = expectMsgType[DamgardJurikEncryptedNum]
+        val d = expectMsgType[DamgardJurikEncryptedNumWithRnd]
         d.userIdentifier should be (Bob)
       }
     }
@@ -104,11 +104,9 @@ class IOHKDamgardJurikActorSpec
         // (even though the test dispatcher might only be a single thread.)
         environmentRef ? SupplyBigInt
         bobRef ! GetDamgardJurikEncryptedNum
-        val d = expectMsgType[DamgardJurikEncryptedNum]
+        val d = expectMsgType[DamgardJurikEncryptedNumWithRnd]
         d.userIdentifier should be (Bob)
         environmentRef ? ForwardToTest
-        bobRef ! DamgardJurikEncryptedNum(Bob, dummyCipherText)
-        bobRef ! DamgardJurikEncryptedNum(Alice, dummyCipherText)
         bobRef ! DamgardJurikEncryptedNum(BrokerCarol, dummyCipherText)
         receiveN(1)
         expectMsg(ReadyToVerify(Bob))

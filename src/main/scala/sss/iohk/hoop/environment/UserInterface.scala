@@ -7,7 +7,7 @@ import scala.io.StdIn
   */
 trait UserInterface {
 
-  def read(prompt: String): String = synchronized {
+  def read(prompt: String): String = {
 
     print(s"$prompt: ")
 

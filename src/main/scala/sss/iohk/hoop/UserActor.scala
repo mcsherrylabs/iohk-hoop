@@ -8,6 +8,7 @@ import edu.biu.scapi.midLayer.ciphertext.BigIntegerCiphertext
 import sss.iohk.hoop.environment.EnvironmentActor._
 
 import scala.language.postfixOps
+import scala.util.Random
 
 
 /**
@@ -39,8 +40,11 @@ class UserActor(userIdentifier: Identifier,
 
   private def encrypting(brokerRef: ActorRef): Receive = {
     case BigIntForEncryption(aBigInt) =>
-      val cipher = encryptor.encrypt(publicRepository(BrokerCarol), aBigInt.bigInteger)
-      brokerRef ! DamgardJurikEncryptedNum(userIdentifier, cipher)
+      val cipherForBrokerDecrypt = encryptor.encrypt(publicRepository(BrokerCarol), aBigInt.bigInteger)
+      val rnd = Random.nextInt(1000)
+      val cipher = encryptor.encrypt(publicRepository(BrokerCarol), aBigInt.bigInteger, BigInt(rnd).bigInteger)
+      if(userIdentifier == Bob) c_Bob = cipher else c_Alice = cipher
+      brokerRef ! DamgardJurikEncryptedNumWithRnd(userIdentifier, cipherForBrokerDecrypt, cipher, BigInt(rnd))
 
 
     case DamgardJurikEncryptedNum(BrokerCarol, encryptedProduct) =>
@@ -52,7 +56,14 @@ class UserActor(userIdentifier: Identifier,
       context.become(init orElse verifying(brokerRef, verifierComputation, commonInput))
       environment ! ReadyToVerify(userIdentifier)
 
+    case DamgardJurikEncryptedNum(Bob, bobsEncNumber) if(userIdentifier == Bob) =>
+        assert(bobsEncNumber.equals(c_Bob), "Encrypted distribtion from broker not same as originally calculated locally")
+
     case DamgardJurikEncryptedNum(Bob, bobsEncNumber) => c_Bob = bobsEncNumber
+
+    case DamgardJurikEncryptedNum(Alice, aliceEncNumber) if(userIdentifier == Alice) =>
+      assert(aliceEncNumber.equals(c_Alice), "Encrypted distribtion from broker not same as originally calculated locally")
+
     case DamgardJurikEncryptedNum(Alice, aliceEncNumber) => c_Alice = aliceEncNumber
   }
 

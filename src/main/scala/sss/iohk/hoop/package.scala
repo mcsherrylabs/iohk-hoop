@@ -24,6 +24,12 @@ package object hoop {
   case object BeginVerification
   case object GetDamgardJurikEncryptedNum
   case class DamgardJurikEncryptedNum(userIdentifier: Identifier, cipher: BigIntegerCiphertext)
+
+  case class DamgardJurikEncryptedNumWithRnd(userIdentifier: Identifier,
+                                             publicKeyCipher: BigIntegerCiphertext,
+                                             randNumCipher: BigIntegerCiphertext,
+                                             rnd: BigInt)
+
   case class ProverResponse(a: SigmaProtocolMsg, z: SigmaProtocolMsg)
 
 }

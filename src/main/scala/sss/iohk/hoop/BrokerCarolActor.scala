@@ -24,56 +24,56 @@ class BrokerCarolActor(publicKeyRepository: Map[Identifier, DamgardJurikPublicKe
                        timeout: FiniteDuration) extends Actor with ActorLogging {
 
 
-  private def waiting(bufferedEncNumberOpt: Option[DamgardJurikEncryptedNum]): Receive = {
+  private def waiting(bufferedEncNumberOpt: Option[DamgardJurikEncryptedNumWithRnd]): Receive = {
     case TooSlow =>
       environment ! ProtocolAborted
       context.become(receive)
 
-    case anotherEncryptedNumber @ DamgardJurikEncryptedNum(userIdentifier, _) =>
+    case anotherEncryptedNumber @ DamgardJurikEncryptedNumWithRnd(userIdentifier, _,  cipher, _) =>
+
       bufferedEncNumberOpt match {
         case None => context.become(waiting(Some(anotherEncryptedNumber)))
         case Some(bufferedEncNumber) =>
           assert(bufferedEncNumber.userIdentifier != userIdentifier,
             s"Received 2 encrypted numbers from same id $userIdentifier")
 
-          bobRef ! bufferedEncNumber
-          bobRef ! anotherEncryptedNumber
-          aliceRef ! bufferedEncNumber
-          aliceRef ! anotherEncryptedNumber
-          context.become(calculateProduct(bufferedEncNumber, anotherEncryptedNumber))
+          aliceRef ! DamgardJurikEncryptedNum(userIdentifier, cipher)
+          aliceRef ! DamgardJurikEncryptedNum(bufferedEncNumber.userIdentifier, bufferedEncNumber.randNumCipher)
+          bobRef ! DamgardJurikEncryptedNum(userIdentifier, cipher)
+          bobRef ! DamgardJurikEncryptedNum(bufferedEncNumber.userIdentifier, bufferedEncNumber.randNumCipher)
+
+          if(bufferedEncNumber.userIdentifier == Bob) {
+            context.become(calculateProduct(bufferedEncNumber, anotherEncryptedNumber))
+          } else {
+            context.become(calculateProduct(anotherEncryptedNumber, bufferedEncNumber))
+          }
+
           self ! CalculateProduct
       }
 
   }
 
-  private def calculateProduct(encryptedNumberA :DamgardJurikEncryptedNum, encryptedNumberB :DamgardJurikEncryptedNum): Receive = {
+  private def calculateProduct(bobsEncryptedMessage :DamgardJurikEncryptedNumWithRnd,
+                               alicesEncryptedMessage :DamgardJurikEncryptedNumWithRnd): Receive = {
     case CalculateProduct =>
 
-      val numA = encryptor.decrypt(encryptedNumberA.cipher)
-      val numB = encryptor.decrypt(encryptedNumberB.cipher)
+      val numA = encryptor.decrypt(bobsEncryptedMessage.publicKeyCipher)
+      val numB = encryptor.decrypt(alicesEncryptedMessage.publicKeyCipher)
       val product = numA.getX.multiply(numB.getX)
       log.info(s"Product => $numA * $numB = $product")
 
-      val r1 = BigInt(Random.nextInt(1000)).bigInteger
-      val r2 = BigInt(Random.nextInt(1000)).bigInteger
+      val r1 = bobsEncryptedMessage.rnd.bigInteger
+      val r2 = alicesEncryptedMessage.rnd.bigInteger
       val r3 = BigInt(Random.nextInt(1000)).bigInteger
-
 
       val x1= new BigIntegerPlainText(numA.getX)
       val x2= new BigIntegerPlainText(numB.getX)
 
-      val num_a_enc: BigIntegerCiphertext = encryptor.encrypt(numA.getX, r1)
-      val num_b_enc: BigIntegerCiphertext = encryptor.encrypt(numB.getX, r2)
+      val num_a_enc: BigIntegerCiphertext = bobsEncryptedMessage.randNumCipher
+      val num_b_enc: BigIntegerCiphertext = alicesEncryptedMessage.randNumCipher
       val num_c_enc: BigIntegerCiphertext = encryptor.encrypt(product, r3)
 
-      /**
-        * REDISTRIBUTING NEWLY FORMED ENCRYPTIONS!!!
-        */
-      bobRef ! DamgardJurikEncryptedNum(Bob, num_a_enc)
-      bobRef ! DamgardJurikEncryptedNum(Alice, num_b_enc)
       bobRef ! DamgardJurikEncryptedNum(BrokerCarol, num_c_enc)
-      aliceRef ! DamgardJurikEncryptedNum(Bob, num_a_enc)
-      aliceRef ! DamgardJurikEncryptedNum(Alice, num_b_enc)
       aliceRef ! DamgardJurikEncryptedNum(BrokerCarol, num_c_enc)
 
       val proverComputation = encryptor.createProverComputation
