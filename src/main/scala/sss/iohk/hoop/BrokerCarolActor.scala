@@ -52,7 +52,7 @@ class BrokerCarolActor(publicKeyRepository: Map[Identifier, DamgardJurikPublicKe
       val numA = encryptor.decrypt(encryptedNumberA.cipher)
       val numB = encryptor.decrypt(encryptedNumberB.cipher)
       val product = numA.getX.multiply(numB.getX)
-      log.debug(s"Product => $numA * $numB = $product")
+      log.info(s"Product => $numA * $numB = $product")
 
       val r1 = BigInt(Random.nextInt(1000)).bigInteger
       val r2 = BigInt(Random.nextInt(1000)).bigInteger
